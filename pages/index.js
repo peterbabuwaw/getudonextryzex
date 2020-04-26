@@ -1,170 +1,190 @@
-import Head from 'next/head'
+import React from 'react'
+import Router from 'next/router'
+import { Row, Col, Form, FormGroup, Label, Input, Button } from 'reactstrap';
+import Layout from '../components/layout'
+import Session from '../utils/session'
 
-export default function Home() {
-  return (
-    <div className="container">
-      <Head>
-        <title>Create Next App</title>
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+export default class extends React.Component {
+  
+  static async getInitialProps({req, res}) {
 
-      <main>
-        <h1 className="title">
-          Welcome to Getudo NEW STUFF!
-        </h1>
+    let props = {
+      session: ''
+    }
+    
+    if (req && req.session) {
+      props.session = req.session
+    } else {
+      props.session = await Session.getSession()
+    }
 
-        <p className="description">
-         GETUDO <code>pages/index.js</code>
-        </p>
+    if (!props.session || !props.session.loggedin) {
+      if (req) {
+        res.redirect('/login')
+      } else {
+        Router.push('/login')
+      }
+    }
+    
+    return props
+  }
 
-                
-      </main>
+  constructor(props) {
+    super(props)
+    this.state = {
+      firstName: '',
+      surname: '',
+      address: '',
+      creditCardNumber: '',
+      mobileNumber: '',
+      accountNumber: '',
+      message: null,
+      messageStyle: null
+    }
+    this.handleChange = this.handleChange.bind(this)
+    this.setProfile = this.setProfile.bind(this)
+  }
 
-      <footer>
-        
-      </footer>
+  async componentDidMount() {
+    this.getProfile()
+  }
 
-      <style jsx>{`
-        .container {
-          min-height: 100vh;
-          padding: 0 0.5rem;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        }
+  getProfile() {
+    fetch('/auth/profile', {
+      credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(response => {
+      if (!response.firstName || !response.surname || !response.address || !response.creditCardNumber || !response.mobileNumber || !response.accountNumber) return
+      this.setState({
+        firstName: response.firstName,
+        surname: response.surname,
+        address: response.address,
+        creditCardNumber: response.creditCardNumber,
+        mobileNumber: response.mobileNumber,
+        accountNumber: response.accountNumber
+      })
+      
+    })
+    
+  }
+  
+  handleChange(event) {
+    this.setState({
+      [event.target.name]: event.target.value,
+    })
+  }
 
-        main {
-          padding: 5rem 0;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-        }
+  async setProfile(e) {
+    e.preventDefault()
+    
+    this.setState({
+      message: null,
+      messageStyle: null
+    })
+    
+    const data = {
+      firstName: this.state.firstName,
+      surname: this.state.surname,
+      address: this.state.address,
+      creditCardNumber: this.state.creditCardNumber,
+      mobileNumber: this.state.mobileNumber,
+      accountNumber: this.state.accountNumber
+    }
+    
+    fetch('/auth/update', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers:{
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(async res => {
+      if (res.status === 200) {
+        this.getProfile()
+        this.setState({
+          message: 'O perfil foi salvo!',
+          messageStyle: 'alert-success'
+        })
+      } else {
+        this.setState({
+          message: 'Falha ao salvar o perfil',
+          messageStyle: 'alert-danger'
+        })
+      }
+    })
+  }
+  
+  render() {
+    
+    const alert = (this.state.message === null) ? <div/> : <div className={`alert ${this.state.messageStyle}`} role="alert">{this.state.message}</div>
 
-        footer {
-          width: 100%;
-          height: 100px;
-          border-top: 1px solid #eaeaea;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
+    if (this.props.session.loggedin) {
+      return (
+        <Layout {...this.props}>
+          <Row className="mt-4 text-center">
+            <Col xs="12" sm=''>
+              <h2>Complete seu perfil</h2>
+              <p className="lead text-muted">
+              Você pode atualizar as informações básicas do seu perfil.
+              </p>
+              <Form onSubmit={this.setProfile}>
 
-        footer img {
-          margin-left: 0.5rem;
-        }
+                <FormGroup row>
+                  <Label xs={2} for="firstName">Primeiro Nome:</Label>
+                  <Col xs={10}>
+                    <Input name="firstName" id="userFirstname" value={this.state.firstName} onChange={this.handleChange} />
+                  </Col>
+                </FormGroup>
 
-        footer a {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-        }
+                <FormGroup row>
+                  <Label xs={2} for="userSurname">Sobrenome:</Label>
+                  <Col xs={10}>
+                    <Input name="surname" id="userSurname" value={this.state.surname} onChange={this.handleChange} />
+                  </Col>
+                </FormGroup>
 
-        a {
-          color: inherit;
-          text-decoration: none;
-        }
+                <FormGroup row>
+                     <Label xs={2} for="userAddress">Endereço:</Label>
+                  <Col xs={10}>
+                    <Input name="address" id="userAddress" value={this.state.address} onChange={this.handleChange} />
+                  </Col>
+                </FormGroup>
 
-        .title a {
-          color: #0070f3;
-          text-decoration: none;
-        }
+                <FormGroup row>
+                  <Label xs={2} for="mobileNumber">Cellular:</Label>
+                  <Col xs={10}>
+                    <Input name="mobileNumber" id="userMobileNumber" value={this.state.mobileNumber} onChange={this.handleChange} />
+                  </Col>
+                </FormGroup>
 
-        .title a:hover,
-        .title a:focus,
-        .title a:active {
-          text-decoration: underline;
-        }
+                <FormGroup row>
+                  <Label xs={2} for="creditCardNumber">Cartão de crédito:</Label>
+                  <Col xs={10}>
+                    <Input name="creditCardNumber" id="creditCardNumber" value={this.state.creditCardNumber} onChange={this.handleChange} />
+                  </Col>
+                </FormGroup>
 
-        .title {
-          margin: 0;
-          line-height: 1.15;
-          font-size: 4rem;
-        }
-
-        .title,
-        .description {
-          text-align: center;
-        }
-
-        .description {
-          line-height: 1.5;
-          font-size: 1.5rem;
-        }
-
-        code {
-          background: #fafafa;
-          border-radius: 5px;
-          padding: 0.75rem;
-          font-size: 1.1rem;
-          font-family: Menlo, Monaco, Lucida Console, Liberation Mono,
-            DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace;
-        }
-
-        .grid {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-wrap: wrap;
-
-          max-width: 800px;
-          margin-top: 3rem;
-        }
-
-        .card {
-          margin: 1rem;
-          flex-basis: 45%;
-          padding: 1.5rem;
-          text-align: left;
-          color: inherit;
-          text-decoration: none;
-          border: 1px solid #eaeaea;
-          border-radius: 10px;
-          transition: color 0.15s ease, border-color 0.15s ease;
-        }
-
-        .card:hover,
-        .card:focus,
-        .card:active {
-          color: #0070f3;
-          border-color: #0070f3;
-        }
-
-        .card h3 {
-          margin: 0 0 1rem 0;
-          font-size: 1.5rem;
-        }
-
-        .card p {
-          margin: 0;
-          font-size: 1.25rem;
-          line-height: 1.5;
-        }
-
-        @media (max-width: 600px) {
-          .grid {
-            width: 100%;
-            flex-direction: column;
-          }
-        }
-      `}</style>
-
-      <style jsx global>{`
-        html,
-        body {
-          padding: 0;
-          margin: 0;
-          font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
-            Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue,
-            sans-serif;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-      `}</style>
-    </div>
-  )
+                <FormGroup row>
+                  <Label xs={2} for="accountNumber">Conta para depósito:</Label>
+                  <Col xs={10}>
+                    <Input name="accountNumber" id="accountNumber" value={this.state.accountNumber} onChange={this.handleChange} />
+                  </Col>
+                </FormGroup>
+                <Button className="mb-3" type="submit">Atualizar</Button>
+              </Form>
+              {alert}
+            </Col>
+          </Row>
+          
+        </Layout>
+      )
+    } else {
+      return (
+        <Layout {...this.props}>
+          <div />
+        </Layout>
+      )
+    }
+  }
 }
