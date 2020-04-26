@@ -10,7 +10,7 @@ export default function Home() {
 
       <main>
         <h1 className="title">
-          Welcome to Getudo
+          Welcome to Getudo NEW STUFF!
         </h1>
 
         <p className="description">
